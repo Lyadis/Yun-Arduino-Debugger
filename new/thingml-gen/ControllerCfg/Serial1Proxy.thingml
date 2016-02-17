@@ -1,0 +1,155 @@
+datatype Char<1>
+    @c_type "char"
+    @type_checker "String"
+;
+
+datatype Byte<1>
+    @c_type "unsigned char"
+    @type_checker "Integer"
+;
+
+datatype Boolean<1>
+    @c_type "uint8_t"
+    @type_checker "Boolean"
+;
+
+datatype UInt8<1>
+    @c_type "uint8_t"
+    @type_checker "Integer"
+;
+
+datatype UInt16<2>
+    @c_type "uint16_t"
+    @type_checker "Integer"
+;
+
+datatype UInt32<4>
+    @c_type "uint32_t"
+    @type_checker "Integer"
+;
+
+datatype UInt64<8>
+    @c_type "uint64_t"
+    @type_checker "Integer"
+;
+
+datatype Int8<1>
+    @c_type "int8_t"
+    @type_checker "Integer"
+;
+
+datatype Int16<2>
+    @c_type "int16_t"
+    @type_checker "Integer"
+;
+
+datatype Int32<4>
+    @c_type "int32_t"
+    @type_checker "Integer"
+;
+
+datatype Int64<8>
+    @c_type "int64_t"
+    @type_checker "Integer"
+;
+
+datatype Float<4>
+    @c_type "float"
+    @type_checker "Real"
+;
+
+object String
+    @c_type "char *"
+    @type_checker "String"
+;
+
+protocol Websocket;protocol Serial1 @nlg "NoBufSerial";
+
+configuration proxyCfg {
+	instance p : proxyType
+
+	connector p.Browser over Websocket
+	connector p.Debug over Serial1
+    @platform "x86"
+}
+
+thing fragment Msgs {
+    message ping(i : Int16)    @code "0"
+;
+    message pong(i : Int16)    @code "1"
+;
+    message serialReceived(b : Byte)    @code "40"
+;
+    message setRefreshRate(r : UInt32)    @code "2"
+;
+    message serialSendBuffer()    @code "23"
+;
+    message setPinLevel(Pin : UInt8, Level : Boolean)    @code "11"
+;
+    message serialClearSendBuffer()    @code "21"
+;
+    message pinValue(Pin : UInt8, Value : UInt16)    @code "31"
+;
+    message pinLevel(Pin : UInt8, Level : Boolean)    @code "30"
+;
+    message serialBegin(Baudrate : UInt32)    @code "20"
+;
+    message serialDisplaySendBuffer()    @code "24"
+;
+    message serialSendBufferContent(i : UInt8, b : Byte)    @code "41"
+;
+    message serialAddToSendBuffer(b : Byte)    @code "22"
+;
+    message setPinValue(Pin : UInt8, Value : UInt16)    @code "12"
+;
+    message pinMode(Pin : UInt8, Mode : Boolean)    @code "10"
+;
+}
+
+thing proxyType includes Msgs {
+
+	provided port Browser {
+       receives ping, setRefreshRate, pinMode, setPinLevel, setPinValue, serialBegin, serialClearSendBuffer, serialAddToSendBuffer, serialSendBuffer, serialDisplaySendBuffer
+       sends pong, pinLevel, pinValue, serialReceived, serialSendBufferContent
+	}
+
+	provided port Debug {
+       sends ping, setRefreshRate, pinMode, setPinLevel, setPinValue, serialBegin, serialClearSendBuffer, serialAddToSendBuffer, serialSendBuffer, serialDisplaySendBuffer
+       receives pong, pinLevel, pinValue, serialReceived, serialSendBufferContent
+	}
+	
+	statechart proxChart init Active {
+		state Active {
+            internal event e : Browser?ping
+            action Debug!ping(e.i)
+            internal event e : Browser?setRefreshRate
+            action Debug!setRefreshRate(e.r)
+            internal event e : Browser?pinMode
+            action Debug!pinMode(e.Pin, e.Mode)
+            internal event e : Browser?setPinLevel
+            action Debug!setPinLevel(e.Pin, e.Level)
+            internal event e : Browser?setPinValue
+            action Debug!setPinValue(e.Pin, e.Value)
+            internal event e : Browser?serialBegin
+            action Debug!serialBegin(e.Baudrate)
+            internal event e : Browser?serialClearSendBuffer
+            action Debug!serialClearSendBuffer()
+            internal event e : Browser?serialAddToSendBuffer
+            action Debug!serialAddToSendBuffer(e.b)
+            internal event e : Browser?serialSendBuffer
+            action Debug!serialSendBuffer()
+            internal event e : Browser?serialDisplaySendBuffer
+            action Debug!serialDisplaySendBuffer()
+            internal event e : Debug?pong
+            action Browser!pong(e.i)
+            internal event e : Debug?pinLevel
+            action Browser!pinLevel(e.Pin, e.Level)
+            internal event e : Debug?pinValue
+            action Browser!pinValue(e.Pin, e.Value)
+            internal event e : Debug?serialReceived
+            action Browser!serialReceived(e.b)
+            internal event e : Debug?serialSendBufferContent
+            action Browser!serialSendBufferContent(e.i, e.b)
+		}
+	}
+}

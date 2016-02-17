@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset=utf-8 http-equiv="Content-Language" content="en"/>
+		<title>Mock-up for debugging ControllerCfg :: Serial1</title>
+		<link rel="stylesheet" type="text/css" href="Serial1.css">
+	</head>
+
+	<body>
+		<section class="main">
+		<div id="header">
+			<div id="header-inside">
+				<h1>Mock-up for debugging ControllerCfg :: Serial1</h1>
+			</div>
+		</div>
+		<div id="logs">
+			<div id="div-received-logs">
+				<h2>Messages received</h2>
+				<div id="received-logs" class="log"></div>
+			</div>
+			<div id="div-sent-logs">
+				<h2>Messages sent</h2>
+				<div id="sent-logs" class="log"></div>
+			</div>
+		</div>
+
+		<div id="send">
+			<div id="send-content">
+				<table>
+				<tr>
+<td></td>
+<td>i</td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="ping" onClick="Serial1_send(0);" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_ping_i" /></td>
+</tr>
+<tr>
+<td></td>
+<td>r</td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="setRefreshRate" onClick="Serial1_send(2);" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_setRefreshRate_r" /></td>
+</tr>
+<tr>
+<td></td>
+<td>Pin</td>
+<td>Mode</td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="pinMode" onClick="Serial1_send(10);" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_pinMode_Pin" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_pinMode_Mode" /></td>
+</tr>
+<tr>
+<td></td>
+<td>Pin</td>
+<td>Level</td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="setPinLevel" onClick="Serial1_send(11);" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_setPinLevel_Pin" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_setPinLevel_Level" /></td>
+</tr>
+<tr>
+<td></td>
+<td>Pin</td>
+<td>Value</td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="setPinValue" onClick="Serial1_send(12);" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_setPinValue_Pin" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_setPinValue_Value" /></td>
+</tr>
+<tr>
+<td></td>
+<td>Baudrate</td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="serialBegin" onClick="Serial1_send(20);" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_serialBegin_Baudrate" /></td>
+</tr>
+<tr>
+<td></td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="serialClearSendBuffer" onClick="Serial1_send(21);" /></td>
+</tr>
+<tr>
+<td></td>
+<td>b</td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="serialAddToSendBuffer" onClick="Serial1_send(22);" /></td>
+<td><input type="text" class="bootstrap-frm" id="param_serialAddToSendBuffer_b" /></td>
+</tr>
+<tr>
+<td></td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="serialSendBuffer" onClick="Serial1_send(23);" /></td>
+</tr>
+<tr>
+<td></td>
+</tr>
+<tr>
+<td><input type="submit" class="btn" value="serialDisplaySendBuffer" onClick="Serial1_send(24);" /></td>
+</tr>
+
+				</table>
+			</div>
+		</div>
+		</section>
+
+		<div id="connect">
+			<div id="connect-content">
+				<table><tr>
+                   <td></td>
+                   <td>Address</td>
+                   <td>Port</td>
+                   <td>Protocol</td>
+                   <td>Status</td>
+		</tr>		<tr>
+                   <td><input class="btn" type="submit" onClick="Serial1_connect();" value="Connect"/></td>
+                   <td><input id="address" type="text" /></td>
+                   <td ><input id="port" type="text" /></td>
+                   <td><input id="protocol" type="text" value="ThingML-protocol" /></td>
+                   <td id=status>.</td>
+		</tr></table>
+			</div>
+		</div>
+
+		<div id="footer">
+		</div>
+
+	<script>
+		function intToXdigitString(i, digit) {
+	if ((i >= 0) && (digit > 0)) {
+		var buf = "" + i;
+		while (buf.length < digit) {
+			buf = "0" + buf;
+		}
+		return buf;
+	} else {
+		var buf = "";
+		while (buf.length < digit) {
+			buf = "0" + buf;
+		}
+		return buf;
+	}
+//return i;
+}
+
+function intToBytes(i, nbB) {
+	var n = nbB;
+	var tmp = i;
+	var res = "";
+	while(n > 1){
+		res += intToXdigitString(Math.floor(tmp / Math.pow(256, n)), 3);
+		tmp = i - res;
+		n--;
+	}
+	res += intToXdigitString(i % 256, 3);
+	return res;
+}
+
+function readByte(i, nbB) {
+	var n = nbB;
+	var res = 0;
+	var tmp = "";
+	while(n > 0) {
+		tmp = i.substring((nbB-n)*3, (nbB-n+1)*3);
+		res += Number(tmp) * Math.pow(256, (n-1));
+		n--;
+	}
+	return res;
+}
+
+	var Serial1_socket;
+
+function Serial1_send(msgID) {
+var tosend, tmp_param, tolog;
+
+tosend = intToBytes(msgID, 2);
+if(msgID == 0) {
+tolog = "ping("
+tmp_param = document.getElementById("param_ping_i").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 2);
+}
+if(msgID == 2) {
+tolog = "setRefreshRate("
+tmp_param = document.getElementById("param_setRefreshRate_r").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 4);
+}
+if(msgID == 10) {
+tolog = "pinMode("
+tmp_param = document.getElementById("param_pinMode_Pin").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 1);
+tolog += ", ";
+tmp_param = document.getElementById("param_pinMode_Mode").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 1);
+}
+if(msgID == 11) {
+tolog = "setPinLevel("
+tmp_param = document.getElementById("param_setPinLevel_Pin").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 1);
+tolog += ", ";
+tmp_param = document.getElementById("param_setPinLevel_Level").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 1);
+}
+if(msgID == 12) {
+tolog = "setPinValue("
+tmp_param = document.getElementById("param_setPinValue_Pin").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 1);
+tolog += ", ";
+tmp_param = document.getElementById("param_setPinValue_Value").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 2);
+}
+if(msgID == 20) {
+tolog = "serialBegin("
+tmp_param = document.getElementById("param_serialBegin_Baudrate").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 4);
+}
+if(msgID == 21) {
+tolog = "serialClearSendBuffer("
+}
+if(msgID == 22) {
+tolog = "serialAddToSendBuffer("
+tmp_param = document.getElementById("param_serialAddToSendBuffer_b").value;
+tolog += tmp_param;
+tosend += intToBytes(tmp_param, 1);
+}
+if(msgID == 23) {
+tolog = "serialSendBuffer("
+}
+if(msgID == 24) {
+tolog = "serialDisplaySendBuffer("
+}
+tolog += ")"
+document.getElementById("sent-logs").textContent += "\n> " + tolog;
+Serial1_socket.send(tosend);
+document.getElementById("sent-logs").scrollBottom;
+}
+
+function Serial1_parse(msg) {
+var parsedMsg = "";
+var msgID = readByte(msg.substring(0, 6), 2);
+if(msgID == 1) {
+parsedMsg = "pong(";
+parsedMsg += readByte(msg.substring(6, 12), 2);
+parsedMsg += ")";
+}
+else if(msgID == 30) {
+parsedMsg = "pinLevel(";
+parsedMsg += readByte(msg.substring(6, 9), 1);
+parsedMsg += ", ";
+parsedMsg += readByte(msg.substring(9, 12), 1);
+parsedMsg += ")";
+}
+else if(msgID == 31) {
+parsedMsg = "pinValue(";
+parsedMsg += readByte(msg.substring(6, 9), 1);
+parsedMsg += ", ";
+parsedMsg += readByte(msg.substring(9, 15), 2);
+parsedMsg += ")";
+}
+else if(msgID == 40) {
+parsedMsg = "serialReceived(";
+parsedMsg += readByte(msg.substring(6, 9), 1);
+parsedMsg += ")";
+}
+else if(msgID == 41) {
+parsedMsg = "serialSendBufferContent(";
+parsedMsg += readByte(msg.substring(6, 9), 1);
+parsedMsg += ", ";
+parsedMsg += readByte(msg.substring(9, 12), 1);
+parsedMsg += ")";
+}
+else {
+parsedMsg += "Unknown message: " + msg;
+}
+document.getElementById("received-logs").textContent +=  "\n> " + parsedMsg;
+document.getElementById("received-logs").scrollBottom;
+}
+
+/* debugg protocol */
+function Serial1_connect() {
+	var protocol = document.getElementById("protocol").value;
+	var addr = document.getElementById("address").value;
+	var port = document.getElementById("port").value;
+
+	
+	if (typeof MozWebSocket != "undefined") {
+		Serial1_socket = new MozWebSocket("ws://" + addr + ":" + port + "/xxx",
+				   protocol);
+	} else {
+		Serial1_socket = new WebSocket("ws://" + addr + ":" + port + "/xxx",
+				   protocol);
+	}
+
+	try {
+		Serial1_socket.onopen = function() {
+			document.getElementById("status").style.backgroundColor = "#40ff40";
+			document.getElementById("status").textContent = " OPENED ";
+		} 
+
+		Serial1_socket.onmessage =function got_packet(msg) {
+			Serial1_parse(msg.data);
+		} 
+
+		Serial1_socket.onclose = function(){
+			document.getElementById("status").style.backgroundColor = "#ff4040";
+			document.getElementById("status").textContent = " CLOSED ";
+		}
+	} catch(exception) {
+		alert('<p>Error' + exception);  
+	}
+}
+	</script>
+	</body>
+
+</html>
